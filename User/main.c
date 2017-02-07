@@ -55,6 +55,7 @@ int main(void)
 { 
 //	delay_init();	    						//延时函数初始化	
 	USARTx_Config();	
+	USART2_Config();
 	I2C_Config();									//I2C初始化//SDA-PC11   SCL-PC12	 
 	init_mpu();
 //	delay_ms(2000);

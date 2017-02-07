@@ -63,13 +63,13 @@ static  unsigned short inv_orientation_matrix_to_scalar(const signed char *mtx)
 void init_mpu(void)
 {
 	uint8_t result = 0;
-//	MPU_INIT:
+	MPU_INIT:
 	result = mpu_init();//初始化
 	if(result)
 	{
 		printf("mpu init failed...\n");
 		delay_ms(1000);
-//		goto MPU_INIT;
+		goto MPU_INIT;
 	}
 	if(!result)   //返回0代表初始化成功
     {   
@@ -279,148 +279,7 @@ void get_accel_bias(void)
 	
 }
 
-void get_accel_1(void)	
-{	
-	static uint8_t new_data,count;
-	float accel_res[3];
-	short filter_accel[3];
-	float accel_x,accel_y,accel_z;
-	short gyro[3], accel[3], sensors;
-	float q0=1.0f,q1=0.0f,q2=0.0f,q3=0.0f;
-	long quat[4];
-	float Pitch,Roll,Yaw;	
-	unsigned long sensor_timestamp;
-	unsigned char more;
-	static float speed,last_accel_z,last_speed,dis_accel,dis;
-	static uint8_t wave_state;
-
-	
-	Time_Stamp = 0;
-	QUAT:
-	dmp_read_fifo(gyro, accel, quat, &sensor_timestamp, &sensors, &more);	 	
-
-	/*四元数解姿态*/
-	if (!(sensors & INV_WXYZ_QUAT )) 
-		goto QUAT;
-	if (sensors & INV_WXYZ_QUAT )    
-	{ 
-		q0 = quat[0] / q30;    
-		q1 = quat[1] / q30;    
-		q2 = quat[2] / q30;    
-		q3 = quat[3] / q30;    
-        
-//    	Pitch  = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3 + Pitch_error; // pitch    
-//    	Roll = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3 + Roll_error; // roll    
-		
-		acc_filter(accel,filter_accel);
-		
-		accel_res[0] = (q0*q0 + q1*q1 - q2*q2 - q3*q3) * filter_accel[0] + (2*q1*q2-2*q0*q3) * filter_accel[1] + (2*q0*q2+2*q1*q3) * filter_accel[2];	
-		accel_res[1] = (2*q0*q3+2*q1*q2) * filter_accel[0] + (q0*q0 - q1*q1 + q2*q2 - q3*q3) * filter_accel[1] + (-2*q0*q1+2*q2*q3) * filter_accel[2];	
-		accel_res[2] = (2*q1*q3-2*q0*q2) * filter_accel[0] + (2*q0*q1+2*q2*q3) * filter_accel[1] + (q0*q0 - q1*q1 - q2*q2 + q3*q3) * filter_accel[2];	
-
-//		accel_res[0] = (q0*q0 + q1*q1 - q2*q2 - q3*q3) * accel[0] + (2*q1*q2-2*q0*q3) * accel[1] + (2*q0*q2+2*q1*q3) * accel[2];	
-//		accel_res[1] = (2*q0*q3+2*q1*q2) * accel[0] + (q0*q0 - q1*q1 + q2*q2 - q3*q3) * accel[1] + (-2*q0*q1+2*q2*q3) * accel[2];	
-//		accel_res[2] = (2*q1*q3-2*q0*q2) * accel[0] + (2*q0*q1+2*q2*q3) * accel[1] + (q0*q0 - q1*q1 - q2*q2 + q3*q3) * accel[2];
-		
-		accel_x = ((float)accel_res[0] / 16384) * 9.8;	
-		accel_y = ((float)accel_res[1] / 16384) * 9.8;	
-		accel_z = ((float)accel_res[2] / 16384) * 9.8;	
-
-	
-		printf("add 1,0,%d",(int)(accel_z*10));				//串口屏显示波形  速度  位移
-		Usart_SendByte(USART1, 0xFF);
-		Usart_SendByte(USART1, 0xFF);
-		Usart_SendByte(USART1, 0xFF);
-		
-		printf("t2.txt=\"%f\"",accel_z);
-		Usart_SendByte(USART1, 0xFF);
-		Usart_SendByte(USART1, 0xFF);
-		Usart_SendByte(USART1, 0xFF);
-		
-		printf("t3.txt=\"%f\"",dis);
-		Usart_SendByte(USART1, 0xFF);
-		Usart_SendByte(USART1, 0xFF);
-		Usart_SendByte(USART1, 0xFF);
-		
-		if(last_accel_z == 0.0) 
-		{
-			last_accel_z = Accel_ZOffset;
-		}
-		
-		if(accel_z < 9.4 || accel_z > 10.2)			
-		{
-			new_data = 1;													//如果accel_z超出重力加速度的±0.2   则可认为有新数据(物体开始运动)
-			count = 0;
-			if(wave_state == STATE_STATIC)
-			{
-				if(accel_z > 9.8 && speed > 0)
-				{
-					wave_state = STATE_UP_HIGHT;
-				}
-				if(accel_z < 9.8 && speed < 0)
-				{
-					wave_state = STATE_DOWN_LOW;
-				}
-			}
-			if(wave_state == STATE_UP_HIGHT)
-			{
-				if(accel_z < 9.8 && speed > 0)
-				{
-					wave_state = STATE_UP_LOW;
-				}
-			}
-			if(wave_state == STATE_DOWN_LOW)
-			{
-				if(accel_z > 9.8 && speed < 0)
-				{
-					wave_state = STATE_DOWN_HIGHT;
-				}
-			}
-		}
-		if(accel_z > 9.4 && accel_z < 10.2)	
-		{
-			if(wave_state == STATE_UP_LOW || wave_state == STATE_DOWN_HIGHT)
-				wave_state = STATE_STATIC;
-			if(accel_z - last_accel_z > -0.05 && accel_z - last_accel_z < 0.05)
-			{
-				if(count == 10 && new_data == 1)													//如果连续检测到加速度在g±0.2范围   则可认为当前无运动
-				{
-					if(new_data)
-					{
-//						printf("\r\naccel %f speed %f dis:%f \r\n",accel_z,speed,dis);
-					}
-//					Accel_ZOffset = accel_z;														//当连续十次检测到accel_z变化小于0.1   则可认为当前无运动  把当前的accel_z赋给accelZOFFSET
-					new_data = 0;
-					speed = 0.0;
-				}
-				if(count < 10)
-				count++;
-			}
-		}
-		
-		if(new_data)
-		{
-			dis_accel = ((accel_z + last_accel_z) / 2) - Accel_ZOffset;
-			
-			if(wave_state == STATE_UP_LOW)
-			{
-				if(speed < 0) speed = 0;
-			}
-			if(wave_state == STATE_DOWN_HIGHT)
-			{
-				if(speed > 0) speed = 0;
-			}
-			
-			speed += dis_accel * Time_Stamp * 0.0001;					//m/s
-			dis += speed * Time_Stamp * 0.01;							//cm
-	
-		}
-		last_accel_z = accel_z;
-	}
-	
-}	
-
-void get_accel(void)	
+void get_accel_2(void)	
 {	
 	static uint8_t new_data,fifter_flag,offset_count,wave_state,valley_flag,isDown;
 	float accel_res[3];
@@ -433,14 +292,14 @@ void get_accel(void)
 	float Pitch,Roll,Yaw;	
 	unsigned long sensor_timestamp;
 	unsigned char more;
-	static float speed,last_accel_z,last_speed,dis_accel,dis,valley_dis,valley_min,down_peak;
+	static float speed,last_accel_z,dis_accel,dis,valley_dis,valley_min,down_peak;
 	
 	Time_Stamp = 0;
 	QUAT:
 	dmp_read_fifo(gyro, accel, quat, &sensor_timestamp, &sensors, &more);	 	
 
 	/*四元数解姿态*/
-	if (!(sensors & INV_WXYZ_QUAT )) 
+	if (!(sensors & INV_WXYZ_QUAT ))
 		goto QUAT;
 	if (sensors & INV_WXYZ_QUAT )    
 	{ 
@@ -449,59 +308,59 @@ void get_accel(void)
 		q2 = quat[2] / q30;    
 		q3 = quat[3] / q30;    
         
-//    	Pitch  = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3 + Pitch_error; // pitch    
-//    	Roll = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3 + Roll_error; // roll    
+    	Pitch  = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3 + Pitch_error; // pitch    
+    	Roll = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3 + Roll_error; // roll    
 		
 		acc_filter(accel,filter_accel);
 		
 		accel_res[0] = (q0*q0 + q1*q1 - q2*q2 - q3*q3) * filter_accel[0] + (2*q1*q2-2*q0*q3) * filter_accel[1] + (2*q0*q2+2*q1*q3) * filter_accel[2];	
 		accel_res[1] = (2*q0*q3+2*q1*q2) * filter_accel[0] + (q0*q0 - q1*q1 + q2*q2 - q3*q3) * filter_accel[1] + (-2*q0*q1+2*q2*q3) * filter_accel[2];	
-		accel_res[2] = (2*q1*q3-2*q0*q2) * filter_accel[0] + (2*q0*q1+2*q2*q3) * filter_accel[1] + (q0*q0 - q1*q1 - q2*q2 + q3*q3) * filter_accel[2];	
+		accel_res[2] = (2*q1*q3-2*q0*q2) * filter_accel[0] + (2*q0*q1+2*q2*q3) * filter_accel[1] + (q0*q0 - q1*q1 - q2*q2 + q3*q3) * filter_accel[2];
+
+//		accel_res[0] = (q0*q0 + q1*q1 - q2*q2 - q3*q3) * filter_accel[0] + (2*q0*q3+2*q1*q2) * filter_accel[1] + (2*q1*q3-2*q0*q2) * filter_accel[2];
+//		accel_res[1] = (2*q1*q2-2*q0*q3) * filter_accel[0] + (q0*q0 - q1*q1 + q2*q2 - q3*q3) * filter_accel[1] + (2*q0*q1+2*q2*q3) * filter_accel[2];
+//		accel_res[2] = (2*q0*q2+2*q1*q3) * filter_accel[0] + (-2*q0*q1+2*q2*q3) * filter_accel[1] + (q0*q0 - q1*q1 - q2*q2 + q3*q3) * filter_accel[2];
+
 		
 		accel_x = (accel_res[0] / 16384) * 9.8;	
 		accel_y = (accel_res[1] / 16384) * 9.8;	
 		accel_z = (accel_res[2] / 16384) * 9.8;		
 	
-		printf("add 1,0,%d",(int)(accel_z*10));				//串口屏显示波形  速度  位移
+		printf("add 1,0,%d",(int)(accel_z*10));											//串口屏显示波形  速度  位移
 		Usart_SendByte(USART1, 0xFF);
 		Usart_SendByte(USART1, 0xFF);
 		Usart_SendByte(USART1, 0xFF);
+
+//		printf("add 1,0,%d",(int)(accel_x*100));	
+//        Usart_SendByte(USART1, 0xFF);
+//        Usart_SendByte(USART1, 0xFF);
+//        Usart_SendByte(USART1, 0xFF);
 
 		
 		printf("t2.txt=\"%f\"",speed);
 		Usart_SendByte(USART1, 0xFF);
 		Usart_SendByte(USART1, 0xFF);
 		Usart_SendByte(USART1, 0xFF);
-		
-//		printf("t3.txt=\"%f\"",dis);
-//		Usart_SendByte(USART1, 0xFF);
-//		Usart_SendByte(USART1, 0xFF);
-//		Usart_SendByte(USART1, 0xFF);
 
-//		printf("Accel_ZOffset %f  accel %f  speed %f dis%f  state %d\r\n",Accel_ZOffset,accel_z,speed,dis,wave_state);
-		
-//		D_accel_z = accel_z - last_accel_z;															
+//		printf("X  %f  Y  %f  Z  %f\r\n",accel_x+9.8,accel_y+9.8,accel_z);
+//		printf("Accel_ZOffset %f  accel %f  speed %f dis%f  state %d\r\n",Accel_ZOffset,accel_z,speed,dis,wave_state);													
 		
 		if(last_accel_z == 0.0) 
 		{
 			last_accel_z = Accel_ZOffset;
 		}
 	
-		if(accel_z > 9.65 && accel_z < 9.85)														//更新accel_offset
-		{
-			
-//			if(wave_state == STATE_UP_LOW || wave_state == STATE_DOWN_HIGHT)
-//				wave_state = STATE_STATIC;
-			
+		if(accel_z > 9.65 && accel_z < 9.85)											//更新accel_offset
+		{			
 			if(wave_state == STATE_UP_LOW)
 				wave_state = STATE_STATIC;
 			
-			if((accel_z > (last_accel_z-0.05)) && (accel_z < (last_accel_z+0.05)))					//每当accel的数值和上一个数值相差±0.05计数加一  当计数连续达到十次  更新平均值为新的accel_offset
+			if((accel_z > (last_accel_z-0.05)) && (accel_z < (last_accel_z+0.05)))		//每当accel的数值和上一个数值相差±0.05计数加一  当计数连续达到十次  更新平均值为新的accel_offset
 			{
 				offset_count++;
 				offset_update_z += accel_z;
 			}
-			else																					//当不满足静止条件  计数/offset清零
+			else																		//当不满足静止条件  计数/offset清零
 			{
 				offset_count = 0;
 				offset_update_z = 0;
@@ -516,10 +375,10 @@ void get_accel(void)
 				if(wave_state == STATE_UP_HIGHT)
 					wave_state = STATE_STATIC;
 				
-				if(wave_state == STATE_DOWN_LOW)							//从下降运动的下半部波形直接回到水平(骤停) 或者附带轻微反向运动
+				if(wave_state == STATE_DOWN_LOW)										//从下降运动的下半部波形直接回到水平(骤停) 或者附带轻微反向运动
 				{
 					wave_state = STATE_STATIC;
-					dis = valley_dis;																//运动的位移为在波谷时记录的位移
+					dis = valley_dis;													//运动的位移为在波谷时记录的位移
 					valley_flag = 0;
 				}
 				
@@ -527,26 +386,25 @@ void get_accel(void)
 				{
 					wave_state = STATE_STATIC;
 				
-					if(isDown == 0)																	//
+					if(isDown == 0)																	
 					{
 						wave_state = STATE_STATIC;
-						dis = valley_dis;															//运动的位移为在波谷时记录的位移
+						dis = valley_dis;												//运动的位移为在波谷时记录的位移
 						valley_flag = 0;
 					}
 					else
 					{
-						isDown = 0;																	//清除判断是否为下降运动的标志
+						isDown = 0;														//清除判断是否为下降运动的标志
 					}
 				}
 				
-				
-				if(new_data == 1) 																	//此处还需斟酌  (前九次数据如何处理)
+				if(new_data == 1) 														//此处还需斟酌  (前九次数据如何处理)
 				{
 					new_data = 0;
 					speed = 0.0;
-//					down_hight_count = 0;															//清除下降运动的上半部波形数据计数标志
+//					down_hight_count = 0;												//清除下降运动的上半部波形数据计数标志
 					
-					if(fifter_flag == 0)															//此时的dis为噪声/震动引起的抖动
+					if(fifter_flag == 0)												//此时的dis为噪声/震动引起的抖动
 						dis = 0;
 					if(fifter_flag == 1)
 						fifter_flag = 0; 
@@ -562,7 +420,7 @@ void get_accel(void)
 		
 		if(accel_z < 9.65 || accel_z > 9.85)			
 		{
-			new_data = 1;													//如果accel_z超出重力加速度的±0.2   则可认为有新数据(物体开始运动)
+			new_data = 1;																//如果accel_z超出重力加速度的±0.2   则可认为有新数据(物体开始运动)
 			if(wave_state == STATE_STATIC)
 			{
 				if(accel_z > Accel_ZOffset && speed > 0)
@@ -596,41 +454,26 @@ void get_accel(void)
 			dis_accel = ((accel_z + last_accel_z) / 2) - Accel_ZOffset;	
 			
 			if(accel_z > 10 || accel_z < 9.5)
-				fifter_flag = 1;												//此处为记录波形的峰值   目的 滤除小波  非完善
+				fifter_flag = 1;														//此处为记录波形的峰值   目的 滤除小波  非完善
 			
 			if(wave_state == STATE_UP_LOW)
 			{
 				if(speed < 0) speed = 0;
 			}
 			
-//			if(wave_state == STATE_DOWN_LOW)									//当6050发生下降运动时  可能会出现直接撞击地面(其他)导致骤停的情况
-//			{																	//在下降过程的下半部波形记录下骤停的临界点
-//				if(accel_z < last_accel_z)										//判断在下半部波形里是否处于加速度减少部分
-//					valley_flag = 1;
-//				else															//如果处于下半部波形里加速度增加的部分
-//				{
-//					if(valley_flag == 1)										//当前一刻处于下半部波形的加速度减少部分
-//					{																
-//						valley_dis = dis;										//该点为波谷  记录当前的dis
-//						valley_flag = 0;										//清除下降波形部分加速度减少的标志
-//					}
-//				}
-
-//			}
-			
-			if(wave_state == STATE_DOWN_LOW)									//当6050发生下降运动时  可能会出现直接撞击地面(其他)导致骤停的情况
-			{																	//在下降过程的下半部波形记录下骤停的临界点
-				if(valley_flag == 0)											//
-				{
-					valley_min = 9.8;
-					valley_flag = 1;
-				}
-				if(valley_flag == 1)											//第一次给min赋值后置为1
-				{
-					if(accel_z < valley_min)										
-					{
-						valley_min = accel_z;									//记录加速度最小值
-						valley_dis = dis;										//更新当前dis为valley_dis
+			if(wave_state == STATE_DOWN_LOW)											//当6050发生下降运动时  可能会出现直接撞击地面(其他)导致骤停的情况
+			{																			//在下降过程的下半部波形记录下骤停的临界点
+				if(valley_flag == 0)													//
+				{		
+					valley_min = 9.8;		
+					valley_flag = 1;		
+				}		
+				if(valley_flag == 1)													//第一次给min赋值后置为1
+				{		
+					if(accel_z < valley_min)												
+					{		
+						valley_min = accel_z;											//记录加速度最小值
+						valley_dis = dis;												//更新当前dis为valley_dis
 					}
 				}
 				
@@ -641,17 +484,490 @@ void get_accel(void)
 				if(speed > 0) 
 					speed = 0;
 				
-				if(accel_z > down_peak)											//判断是否为正常的下降运动								
-					isDown = 1;
-			}
-			
-			speed += dis_accel * Time_Stamp * 0.0001;							//m/s
-			dis += speed * Time_Stamp * 0.01;									//cm
+				if(accel_z > down_peak)													//判断是否为正常的下降运动								
+					isDown = 1;		
+			}		
+					
+			speed += dis_accel * Time_Stamp * 0.0001;									//m/s
+			dis += speed * Time_Stamp * 0.01;											//cm
 	
 		}
 		last_accel_z = accel_z;
-//		printf("state %d",wave_state);
+		Usart_SendByte(USART2,wave_state+'0');
 	}
-
-	
 }	
+
+void get_accel(void)	
+{	
+	static uint8_t new_data,fifter_flag,offset_count,wave_state,valley_flag,isDown;
+	float accel_res[3];
+	short filter_accel[3];
+	float accel_x,accel_y,accel_z;
+	static float offset_update_z; 
+	short gyro[3], accel[3], sensors;
+	float q0=1.0f,q1=0.0f,q2=0.0f,q3=0.0f;
+	long quat[4];
+	float Pitch,Roll,Yaw;	
+	unsigned long sensor_timestamp;
+	unsigned char more;
+	static float speed,last_accel_z,dis,valley_dis,valley_min,down_peak,dis_real;
+	float dis_accel;
+	
+	Time_Stamp = 0;
+	QUAT:
+	dmp_read_fifo(gyro, accel, quat, &sensor_timestamp, &sensors, &more);	 	
+
+	/*四元数解姿态*/
+	if (!(sensors & INV_WXYZ_QUAT ))
+		goto QUAT;
+	if (sensors & INV_WXYZ_QUAT )    
+	{ 
+		q0 = quat[0] / q30;    
+		q1 = quat[1] / q30;    
+		q2 = quat[2] / q30;    
+		q3 = quat[3] / q30;    
+        
+    	Pitch  = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3 + Pitch_error; // pitch    
+    	Roll = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3 + Roll_error; // roll    
+		
+		acc_filter(accel,filter_accel);
+		
+		accel_res[0] = (q0*q0 + q1*q1 - q2*q2 - q3*q3) * filter_accel[0] + (2*q1*q2-2*q0*q3) * filter_accel[1] + (2*q0*q2+2*q1*q3) * filter_accel[2];	
+		accel_res[1] = (2*q0*q3+2*q1*q2) * filter_accel[0] + (q0*q0 - q1*q1 + q2*q2 - q3*q3) * filter_accel[1] + (-2*q0*q1+2*q2*q3) * filter_accel[2];	
+		accel_res[2] = (2*q1*q3-2*q0*q2) * filter_accel[0] + (2*q0*q1+2*q2*q3) * filter_accel[1] + (q0*q0 - q1*q1 - q2*q2 + q3*q3) * filter_accel[2];
+
+//		accel_res[0] = (q0*q0 + q1*q1 - q2*q2 - q3*q3) * filter_accel[0] + (2*q0*q3+2*q1*q2) * filter_accel[1] + (2*q1*q3-2*q0*q2) * filter_accel[2];
+//		accel_res[1] = (2*q1*q2-2*q0*q3) * filter_accel[0] + (q0*q0 - q1*q1 + q2*q2 - q3*q3) * filter_accel[1] + (2*q0*q1+2*q2*q3) * filter_accel[2];
+//		accel_res[2] = (2*q0*q2+2*q1*q3) * filter_accel[0] + (-2*q0*q1+2*q2*q3) * filter_accel[1] + (q0*q0 - q1*q1 - q2*q2 + q3*q3) * filter_accel[2];
+
+		
+		accel_x = (accel_res[0] / 16384) * 9.8;	
+		accel_y = (accel_res[1] / 16384) * 9.8;	
+		accel_z = (accel_res[2] / 16384) * 9.8;		
+	
+		printf("add 1,0,%d",(int)(accel_z*10));											//串口屏显示波形  速度  位移
+		Usart_SendByte(USART1, 0xFF);
+		Usart_SendByte(USART1, 0xFF);
+		Usart_SendByte(USART1, 0xFF);
+
+//		printf("add 1,0,%d",(int)(accel_x*100));	
+//        Usart_SendByte(USART1, 0xFF);
+//        Usart_SendByte(USART1, 0xFF);
+//        Usart_SendByte(USART1, 0xFF);
+
+		
+		printf("t2.txt=\"%f\"",Accel_ZOffset);
+		Usart_SendByte(USART1, 0xFF);
+		Usart_SendByte(USART1, 0xFF);
+		Usart_SendByte(USART1, 0xFF);
+
+//		printf("X  %f  Y  %f  Z  %f\r\n",accel_x+9.8,accel_y+9.8,accel_z);
+//		printf("Accel_ZOffset %f  accel %f  speed %f dis%f  state %d\r\n",Accel_ZOffset,accel_z,speed,dis,wave_state);													
+		
+		if(last_accel_z == 0.0) 
+		{
+			last_accel_z = Accel_ZOffset;
+		}
+	
+		if((accel_z > 9.65) && (accel_z < 9.85))											//更新accel_offset
+		{			
+			
+			if((accel_z > (last_accel_z-0.05)) && (accel_z < (last_accel_z+0.05)))		//每当accel的数值和上一个数值相差±0.05计数加一  当计数连续达到十次  更新平均值为新的accel_offset
+			{
+				if((offset_count == 0) && (new_data == 1))
+				dis_real = dis;
+				
+				offset_count++;
+				offset_update_z += accel_z;
+			}
+			else																		//当不满足静止条件  计数/offset清零
+			{
+				offset_count = 0;
+				offset_update_z = 0;
+			}
+			
+			if(offset_count == 10)
+			{
+				speed = 0.0;
+				Accel_ZOffset = offset_update_z/10;
+				offset_count = 0;
+				offset_update_z = 0;
+
+				if(wave_state == STATE_UP_HIGHT)										//不构成波形
+				{
+					wave_state = STATE_STATIC;
+					speed = 0;
+					dis = 0;
+				}
+				
+				if(wave_state == STATE_UP_LOW)
+				wave_state = STATE_STATIC;
+				
+				if(wave_state == STATE_DOWN_LOW)										//从下降运动的下半部波形直接回到水平(骤停) 或者附带轻微反向运动
+				{
+					wave_state = STATE_STATIC;
+					if(valley_min < 8.5)												//骤停加速度较大 此处以8.5为准
+						dis = valley_dis;												//运动的位移为在波谷时记录的位移
+					else 																//不满足 则视为不完整波形 舍弃
+						dis = 0;
+					valley_flag = 0;													//波形重新回到水平时 该标志清零  等待下一次首次出现下降的前下半部分波形置一
+				}
+				
+				if(wave_state == STATE_DOWN_HIGHT)
+				{
+					wave_state = STATE_STATIC;
+				
+					if(isDown == 0)																	
+					{
+						if(valley_min < 8.5)
+							dis = valley_dis;											//运动的位移为在波谷时记录的位移
+						valley_flag = 0;
+					}
+					else
+					{
+						isDown = 0;														//清除判断是否为下降运动的标志
+					}
+				}
+				
+				if(new_data == 1) 														//此处还需斟酌  (前九次数据如何处理)
+				{
+					new_data = 0;
+					speed = 0.0;
+					
+					if(fifter_flag == 0)												//此时的dis为噪声/震动引起的抖动
+						dis = 0;
+//					if(fifter_flag == 1)
+					else
+					{
+						fifter_flag = 0; 
+					
+						printf("t3.txt=\"%f\"",dis);
+						Usart_SendByte(USART1, 0xFF);
+						Usart_SendByte(USART1, 0xFF);
+						Usart_SendByte(USART1, 0xFF);
+					}
+					dis = 0.0;
+				}
+			}
+		}
+		
+		if(accel_z < 9.65 || accel_z > 9.85)			
+		{
+			new_data = 1;																//如果accel_z超出重力加速度的±0.2   则可认为有新数据(物体开始运动)
+			if(wave_state == STATE_STATIC)
+			{
+				if(accel_z > 10)// && speed > 0)
+				{
+					wave_state = STATE_UP_HIGHT;
+				}
+				if(accel_z < 9.5)// && speed < 0)
+				{
+					wave_state = STATE_DOWN_LOW;
+				}
+			}
+			
+			if(wave_state == STATE_UP_HIGHT)
+			{
+				if(accel_z > 10)														//判断up_hight时  峰值 是否达到正常波形的峰值
+					fifter_flag = STATE_UP_HIGHT;	
+				
+				if(accel_z < Accel_ZOffset)// && speed > 0)
+				{
+					if(fifter_flag == STATE_UP_HIGHT)
+						wave_state = STATE_UP_LOW;
+					if(fifter_flag == STATE_STATIC)
+					{
+						wave_state = STATE_DOWN_LOW;
+						speed = 0;
+						dis = 0;
+					}
+				}
+			}
+			
+			if(wave_state == STATE_UP_LOW)
+			{
+				if(speed < 0) speed = 0;
+				
+				if(accel_z < 9.5)														//判断up_low时  峰值 是否达到正常波形的谷值
+					fifter_flag = STATE_UP_LOW;
+			}
+			
+			if(wave_state == STATE_DOWN_LOW)
+			{
+				if(accel_z > Accel_ZOffset)// && speed < 0)
+				{
+					down_peak = (((Accel_ZOffset-valley_min)/2)+Accel_ZOffset);
+					if(fifter_flag == STATE_DOWN_LOW)
+						wave_state = STATE_DOWN_HIGHT;
+					if(fifter_flag == STATE_STATIC)
+					{
+						wave_state = STATE_DOWN_LOW;
+						speed = 0;
+						dis = 0;
+					}
+				}
+				
+				if(valley_flag == 0)													//
+				{		
+					valley_min = 9.8;		
+					valley_flag = 1;		
+				}
+				
+				if(valley_flag == 1)													//第一次给min赋值后置为1
+				{		
+					if(accel_z < valley_min)												
+					{		
+						valley_min = accel_z;											//记录加速度最小值
+						valley_dis = dis;												//更新当前dis为valley_dis
+					}
+				}
+				
+				if(accel_z < 9.5)														//判断down_low时  峰值 是否达到正常波形的谷值
+					fifter_flag = STATE_DOWN_LOW;
+			}
+			
+			if(wave_state == STATE_DOWN_HIGHT)
+			{
+				if(speed > 0) 
+					speed = 0;
+				
+				if(accel_z > down_peak)													//判断是否为正常的下降运动								
+					isDown = 1;		
+				
+				if(accel_z > 10)														//判断down_hight时  峰值 是否达到正常波形的峰值
+					fifter_flag = STATE_DOWN_HIGHT;
+			}
+			
+			dis_accel = ((accel_z + last_accel_z) / 2) - Accel_ZOffset;	
+
+			speed += dis_accel * Time_Stamp * 0.0001;									//m/s
+			dis += speed * Time_Stamp * 0.01;											//cm
+
+		}
+		
+		last_accel_z = accel_z;
+		Usart_SendByte(USART2,wave_state+'0');
+	}
+}	
+
+void get_accel_z(void)	
+{	
+	
+	float accel_res[3];
+	short filter_accel[3];
+	float accel_x,accel_y,accel_z;
+	short gyro[3], accel[3], sensors;	float q0=1.0f,q1=0.0f,q2=0.0f,q3=0.0f;
+	long quat[4];
+	float Pitch,Roll,Yaw;	
+	unsigned long sensor_timestamp;
+	unsigned char more;
+	
+	Time_Stamp = 0;
+	QUAT:
+	dmp_read_fifo(gyro, accel, quat, &sensor_timestamp, &sensors, &more);	 	
+
+	/*四元数解姿态*/
+	if (!(sensors & INV_WXYZ_QUAT ))
+		goto QUAT;
+	if (sensors & INV_WXYZ_QUAT )    
+	{ 
+		q0 = quat[0] / q30;    
+		q1 = quat[1] / q30;    
+		q2 = quat[2] / q30;    
+		q3 = quat[3] / q30;    
+        
+    	Pitch  = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3 + Pitch_error; // pitch    
+    	Roll = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3 + Roll_error; // roll    
+		
+		acc_filter(accel,filter_accel);
+		
+		accel_res[0] = (q0*q0 + q1*q1 - q2*q2 - q3*q3) * filter_accel[0] + (2*q1*q2-2*q0*q3) * filter_accel[1] + (2*q0*q2+2*q1*q3) * filter_accel[2];	
+		accel_res[1] = (2*q0*q3+2*q1*q2) * filter_accel[0] + (q0*q0 - q1*q1 + q2*q2 - q3*q3) * filter_accel[1] + (-2*q0*q1+2*q2*q3) * filter_accel[2];	
+		accel_res[2] = (2*q1*q3-2*q0*q2) * filter_accel[0] + (2*q0*q1+2*q2*q3) * filter_accel[1] + (q0*q0 - q1*q1 - q2*q2 + q3*q3) * filter_accel[2];
+	
+		accel_x = ((accel_res[0] / 16384) * 9.8)+9.8;	
+		accel_y = ((accel_res[1] / 16384) * 9.8)+9.8;	
+		accel_z = (accel_res[2] / 16384) * 9.8;		
+	
+		printf("add 1,0,%d",(int)(accel_z*10));											//串口屏显示波形  速度  位移
+		Usart_SendByte(USART1, 0xFF);
+		Usart_SendByte(USART1, 0xFF);
+		Usart_SendByte(USART1, 0xFF);
+
+//		printf("add 1,0,%d",(int)(accel_x*10));	
+//      Usart_SendByte(USART1, 0xFF);
+//      Usart_SendByte(USART1, 0xFF);
+//      Usart_SendByte(USART1, 0xFF);
+
+//		
+//		printf("t2.txt=\"%f\"",speed);
+//		Usart_SendByte(USART1, 0xFF);
+//		Usart_SendByte(USART1, 0xFF);
+//		Usart_SendByte(USART1, 0xFF);
+
+//		printf("X  %f  Y  %f  Z  %f\r\n",accel_x,accel_y,accel_z);
+//		printf("Accel_ZOffset %f  accel %f  speed %f dis%f  state %d\r\n",Accel_ZOffset,accel_z,speed,dis,wave_state);													
+		
+		get_dis_z(accel_z);
+		
+	}
+}	
+
+void get_dis_z(float accel_z)
+{
+	static uint8_t new_data;															
+	static uint8_t wave_state,offset_count;
+	static float last_accel_z;
+	static float offset_update_z; 
+	static float dis;
+	static float speed,dis_accel,valley_dis,valley_min,down_peak;
+	static uint8_t fifter_flag,valley_flag,isDown;
+	
+	if(last_accel_z == 0.0) 
+		{
+			last_accel_z = Accel_ZOffset;
+		}
+	
+		if(accel_z > 9.65 && accel_z < 9.85)											//更新accel_offset
+		{			
+			if(wave_state == STATE_UP_LOW)
+				wave_state = STATE_STATIC;
+			
+			if((accel_z > (last_accel_z-0.05)) && (accel_z < (last_accel_z+0.05)))		//每当accel的数值和上一个数值相差±0.05计数加一  当计数连续达到十次  更新平均值为新的accel_offset
+			{
+				offset_count++;
+				offset_update_z += accel_z;
+			}
+			else																		//当不满足静止条件  计数/offset清零
+			{
+				offset_count = 0;
+				offset_update_z = 0;
+			}
+			
+			if(offset_count == 10)
+			{
+				Accel_ZOffset = offset_update_z/10;
+				offset_count = 0;
+				offset_update_z = 0;
+				
+				if(wave_state == STATE_UP_HIGHT)
+					wave_state = STATE_STATIC;
+				
+				if(wave_state == STATE_DOWN_LOW)										//从下降运动的下半部波形直接回到水平(骤停) 或者附带轻微反向运动
+				{
+					wave_state = STATE_STATIC;
+					dis = valley_dis;													//运动的位移为在波谷时记录的位移
+					valley_flag = 0;
+				}
+				
+				if(wave_state == STATE_DOWN_HIGHT)
+				{
+					wave_state = STATE_STATIC;
+				
+					if(isDown == 0)																	
+					{
+						wave_state = STATE_STATIC;
+						dis = valley_dis;												//运动的位移为在波谷时记录的位移
+						valley_flag = 0;
+					}
+					else
+					{
+						isDown = 0;														//清除判断是否为下降运动的标志
+					}
+				}
+				
+				if(new_data == 1) 														//此处还需斟酌  (前九次数据如何处理)
+				{
+					new_data = 0;
+					speed = 0.0;
+//					down_hight_count = 0;												//清除下降运动的上半部波形数据计数标志
+					
+					if(fifter_flag == 0)												//此时的dis为噪声/震动引起的抖动
+						dis = 0;
+					if(fifter_flag == 1)
+						fifter_flag = 0; 
+					
+					printf("t3.txt=\"%f\"",dis);
+					Usart_SendByte(USART1, 0xFF);
+					Usart_SendByte(USART1, 0xFF);
+					Usart_SendByte(USART1, 0xFF);
+					dis = 0.0;
+				}
+			}
+		}
+		
+		if(accel_z < 9.65 || accel_z > 9.85)			
+		{
+			new_data = 1;																//如果accel_z超出重力加速度的±0.2   则可认为有新数据(物体开始运动)
+			if(wave_state == STATE_STATIC)
+			{
+				if(accel_z > Accel_ZOffset && speed > 0)
+				{
+					wave_state = STATE_UP_HIGHT;
+				}
+				if(accel_z < Accel_ZOffset && speed < 0)
+				{
+					wave_state = STATE_DOWN_LOW;
+				}
+			}
+			if(wave_state == STATE_UP_HIGHT)
+			{
+				if(accel_z < Accel_ZOffset && speed > 0)
+				{
+					wave_state = STATE_UP_LOW;
+				}
+			}
+			if(wave_state == STATE_DOWN_LOW)
+			{
+				if(accel_z > Accel_ZOffset && speed < 0)
+				{
+					down_peak = (((Accel_ZOffset-valley_min)/2)+Accel_ZOffset);
+					wave_state = STATE_DOWN_HIGHT;
+				}
+			}
+		}
+
+		if(new_data)
+		{
+			dis_accel = ((accel_z + last_accel_z) / 2) - Accel_ZOffset;	
+			
+			if(accel_z > 10 || accel_z < 9.5)
+				fifter_flag = 1;														//此处为记录波形的峰值   目的 滤除小波  非完善
+			
+			if(wave_state == STATE_UP_LOW)
+			{
+				if(speed < 0) speed = 0;
+			}
+			
+			if(wave_state == STATE_DOWN_LOW)											//当6050发生下降运动时  可能会出现直接撞击地面(其他)导致骤停的情况
+			{																			//在下降过程的下半部波形记录下骤停的临界点
+				if(valley_flag == 0)													//
+				{		
+					valley_min = 9.8;		
+					valley_flag = 1;		
+				}		
+				if(valley_flag == 1)													//第一次给min赋值后置为1
+				{		
+					if(accel_z < valley_min)												
+					{		
+						valley_min = accel_z;											//记录加速度最小值
+						valley_dis = dis;												//更新当前dis为valley_dis
+					}
+				}
+			}
+			
+			if(wave_state == STATE_DOWN_HIGHT)
+			{
+				if(speed > 0) 
+					speed = 0;
+				
+				if(accel_z > down_peak)													//判断是否为正常的下降运动								
+					isDown = 1;		
+			}		
+					
+			speed += dis_accel * Time_Stamp * 0.0001;									//m/s
+			dis += speed * Time_Stamp * 0.01;											//cm
+	
+		}
+		last_accel_z = accel_z;
+}

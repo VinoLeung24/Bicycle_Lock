@@ -42,6 +42,7 @@ enum WAVE
 void init_mpu(void);
 void get_accel(void);	
 void get_accel_1(void);
+void get_accel_2(void);
 void get_accel_bias(void);
-
+void get_dis_z(float accel_z);
 #endif
