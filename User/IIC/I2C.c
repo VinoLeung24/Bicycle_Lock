@@ -1,21 +1,21 @@
 #include "i2c.h"
 
-#define SCL_H()         GPIOC->BSRR = GPIO_Pin_12
-#define SCL_L()         GPIOC->BRR  = GPIO_Pin_12 
+#define SCL_H()         GPIOA->BSRR = GPIO_Pin_0
+#define SCL_L()         GPIOA->BRR  = GPIO_Pin_0 
 
-#define SDA_H()         GPIOC->BSRR = GPIO_Pin_11 
-#define SDA_L()         GPIOC->BRR  = GPIO_Pin_11 
+#define SDA_H()         GPIOA->BSRR = GPIO_Pin_1 
+#define SDA_L()         GPIOA->BRR  = GPIO_Pin_1 
 
-#define SDA_read()      GPIOC->IDR  & GPIO_Pin_11 
+#define SDA_read()      GPIOA->IDR  & GPIO_Pin_1 
 
 void I2C_Config(void)
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12 | GPIO_Pin_11;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
 }
 
 static void I2C_delay(void)

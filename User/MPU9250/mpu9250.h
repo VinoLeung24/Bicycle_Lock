@@ -30,7 +30,7 @@ static signed char gyro_orientation[9] = {1, 0, 0,
                                            0,1, 0,
                                            0, 0, 1};
 
-enum WAVE
+enum WAVE_Z
 {
 	STATE_STATIC,
 	STATE_UP_HIGHT,
@@ -39,10 +39,19 @@ enum WAVE
 	STATE_DOWN_LOW,
 };
 
+enum WAVE_X
+{
+	STATE_STATIC_X,
+	STATE_RIGHT_HIGHT,
+	STATE_RIGHT_LOW,
+	STATE_LEFT_HIGHT,
+	STATE_LEFT_LOW,
+};
+
 void init_mpu(void);
-void get_accel(void);	
-void get_accel_1(void);
-void get_accel_2(void);
+float get_accel(void);	
 void get_accel_bias(void);
+void get_accel_xyz(void);
 void get_dis_z(float accel_z);
+void get_dis_x(float accel_x);
 #endif

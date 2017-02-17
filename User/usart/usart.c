@@ -116,10 +116,10 @@ void USART2_Config(void)
 int fputc(int ch, FILE *f)
 {
 		/* 发送一个字节数据到USART1 */
-		USART_SendData(macUSARTx, (uint8_t) ch);
+		USART_SendData(USART1, (uint8_t) ch);
 		
 		/* 等待发送完毕 */
-		while (USART_GetFlagStatus(macUSARTx, USART_FLAG_TXE) == RESET);		
+		while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);		
 	
 		return (ch);
 }
@@ -128,9 +128,9 @@ int fputc(int ch, FILE *f)
 int fgetc(FILE *f)
 {
 		/* 等待串口1输入数据 */
-		while (USART_GetFlagStatus(macUSARTx, USART_FLAG_RXNE) == RESET);
+		while (USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET);
 
-		return (int)USART_ReceiveData(macUSARTx);
+		return (int)USART_ReceiveData(USART1);
 }
 
 void Usart_SendByte( USART_TypeDef * pUSARTx, uint8_t ch)

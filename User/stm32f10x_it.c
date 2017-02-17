@@ -26,7 +26,12 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h"
 #include "usart.h"
-extern uint8_t Time_Stamp;
+
+extern uint8_t  Time_Stamp;
+extern uint16_t  uSec_Count;
+extern uint8_t Sec_Count;
+extern uint16_t u_Count_Danger;
+extern uint16_t s_Count_Danger;
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
   */
@@ -137,7 +142,7 @@ void PendSV_Handler(void)
   */
 void SysTick_Handler(void)
 {
-//	GPIOB->ODR ^= GPIO_Pin_10;
+	
 }
 
 void TIM2_IRQHandler(void)
@@ -145,6 +150,21 @@ void TIM2_IRQHandler(void)
 	if ( TIM_GetITStatus(TIM2 , TIM_IT_Update) != RESET ) 
 	{
 		Time_Stamp++;
+		
+		uSec_Count++;
+		if(uSec_Count == 10000)
+		{
+			Sec_Count++;
+			uSec_Count = 0;
+		}
+		
+		u_Count_Danger++;
+		if(u_Count_Danger == 10000)
+		{
+			s_Count_Danger++;
+			u_Count_Danger = 0;
+		}
+		
 		TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);  		 
 	}		 	
 }

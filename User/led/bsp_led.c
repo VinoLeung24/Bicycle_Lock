@@ -24,43 +24,41 @@
   */
 void LED_GPIO_Config(void)
 {		
-		/*定义一个GPIO_InitTypeDef类型的结构体*/
-		GPIO_InitTypeDef GPIO_InitStructure;
 
-		/*开启GPIOB和GPIOF的外设时钟*/
-		RCC_APB2PeriphClockCmd( macLED1_GPIO_CLK|macLED2_GPIO_CLK|macLED3_GPIO_CLK, ENABLE); 
+}
 
-		/*选择要控制的GPIOB引脚*/															   
-		GPIO_InitStructure.GPIO_Pin = macLED1_GPIO_PIN;	
+void buzzer_init(void)
+{
+	GPIO_InitTypeDef GPIO_InitStructure;
+	RCC_APB2PeriphClockCmd(	RCC_APB2Periph_GPIOB, ENABLE );	
+	   
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_14;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP ;   //推挽输出
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	Buzzer_OFF;
+}
 
-		/*设置引脚模式为通用推挽输出*/
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;   
+void Shake_GPIO_Config(void)
+{
+	GPIO_InitTypeDef GPIO_InitStructure;
+	
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA,ENABLE);
+	
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12; 
 
-		/*设置引脚速率为50MHz */   
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz; 
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU; 
+	
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+}
 
-		/*调用库函数，初始化GPIOB0*/
-		GPIO_Init(macLED1_GPIO_PORT, &GPIO_InitStructure);	
-		
-		/*选择要控制的GPIOF引脚*/															   
-		GPIO_InitStructure.GPIO_Pin = macLED2_GPIO_PIN;
-
-		/*调用库函数，初始化GPIOF7*/
-		GPIO_Init(macLED2_GPIO_PORT, &GPIO_InitStructure);
-		
-		/*选择要控制的GPIOF引脚*/															   
-		GPIO_InitStructure.GPIO_Pin = macLED3_GPIO_PIN;
-
-		/*调用库函数，初始化GPIOF7*/
-		GPIO_Init(macLED3_GPIO_PORT, &GPIO_InitStructure);			  
-
-		/* 关闭所有led灯	*/
-		GPIO_SetBits(macLED1_GPIO_PORT, macLED1_GPIO_PIN);
-		
-		/* 关闭所有led灯	*/
-		GPIO_SetBits(macLED2_GPIO_PORT, macLED2_GPIO_PIN);	 
-    
-    /* 关闭所有led灯	*/
-		GPIO_SetBits(macLED3_GPIO_PORT, macLED3_GPIO_PIN);	 
+//检测自行车是否发生震动
+//返回值:
+//		发生震动    0
+//			 否     1
+uint8_t isShake(void)
+{
+//	return GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_12);
+	return GPIOA->IDR  & GPIO_Pin_12;
 }
 /*********************************************END OF FILE**********************/
