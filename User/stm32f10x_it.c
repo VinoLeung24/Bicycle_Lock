@@ -26,12 +26,23 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h"
 #include "usart.h"
+#include "bicycle.h"
+
+extern BICYCLE mBICYCLE;
 
 extern uint8_t  Time_Stamp;
 extern uint16_t  uSec_Count;
 extern uint8_t Sec_Count;
-extern uint16_t u_Count_Danger;
-extern uint16_t s_Count_Danger;
+
+extern uint16_t u_Count_Lift;
+extern uint16_t s_Count_Lift;
+
+extern uint16_t u_Count_Shake;
+extern uint16_t s_Count_Shake;
+
+extern uint8_t new_lift;
+extern uint8_t new_shake;
+
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
   */
@@ -145,6 +156,19 @@ void SysTick_Handler(void)
 	
 }
 
+extern uint8_t alarm;
+
+void USART1_IRQHandler(void)
+{
+	char ch;
+	if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
+	{ 	
+		ch	= USART_ReceiveData(USART1);
+	  	if(ch == 'C')
+			alarm = 0;
+	} 
+}
+
 void TIM2_IRQHandler(void)
 {
 	if ( TIM_GetITStatus(TIM2 , TIM_IT_Update) != RESET ) 
@@ -158,12 +182,41 @@ void TIM2_IRQHandler(void)
 			uSec_Count = 0;
 		}
 		
-		u_Count_Danger++;
-		if(u_Count_Danger == 10000)
+		if(mBICYCLE.bicycle_state == STATE_LIFT)
 		{
-			s_Count_Danger++;
-			u_Count_Danger = 0;
+			if(new_lift == 0)
+			{
+				new_lift = 1;
+				s_Count_Lift = 0;
+				u_Count_Lift = 0;
+			}
+			
+				u_Count_Lift++;
+				if(u_Count_Lift == 10000)
+				{
+					s_Count_Lift++;
+					u_Count_Lift = 0;
+				}
+			
 		}
+		
+		if(mBICYCLE.bicycle_state == STATE_SHAKE)
+		{
+			if(new_shake == 0)
+			{
+				new_shake = 1;
+				s_Count_Shake = 0;
+				u_Count_Shake = 0;
+			}
+			
+			u_Count_Shake++;
+			if(u_Count_Shake == 10000)
+			{
+				s_Count_Shake++;
+				u_Count_Shake = 0;
+			}
+		}
+
 		
 		TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);  		 
 	}		 	

@@ -1,39 +1,31 @@
 /**
   ******************************************************************************
   * @file    bsp_usart1.c
-  * @author  fire
-  * @version V1.0
+  * @author  
+  * @version 
   * @date    2013-xx-xx
-  * @brief   usart应用bsp
+  * @brief   usart
   ******************************************************************************
   * @attention
-  *
-  * 实验平台:野火 iSO STM32 开发板 
-  * 论坛    :http://www.chuxue123.com
-  * 淘宝    :http://firestm32.taobao.com
   *
   ******************************************************************************
   */
   
 #include "usart.h"
 
-
-
-/// 配置USART1接收中断
-//static void NVIC_Configuration(void)
-//{
-//	NVIC_InitTypeDef NVIC_InitStructure; 
-//	/* Configure the NVIC Preemption Priority Bits */  
-//	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
-//	
-//	/* Enable the USARTy Interrupt */
-//	NVIC_InitStructure.NVIC_IRQChannel = macUSART_IRQ;	 
-//	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-//	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-//	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-//	NVIC_Init(&NVIC_InitStructure);
-//}
-
+void NVIC_Configuration(void)
+{
+	NVIC_InitTypeDef NVIC_InitStructure; 
+	/* Configure the NVIC Preemption Priority Bits */  
+	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
+	
+	/* Enable the USARTy Interrupt */
+	NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;	 
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+}
 
  /**
   * @brief  USART1 GPIO 配置,工作模式配置。115200 8-N-1

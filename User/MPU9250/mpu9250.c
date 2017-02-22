@@ -7,11 +7,11 @@
 
 uint8_t Time_Stamp;
 
-float Accel_XOffset;
-float Accel_YOffset;
-float Accel_ZOffset = 9.8;
+float Accel_XOffset = 0;
+float Accel_YOffset = 0;
+float Accel_ZOffset = 0;
 
-int Accel_ZErr = 4014;
+int Accel_ZErr = 1416;
 
 float Pitch,Roll;
 float accel_x,accel_y,accel_z;
@@ -243,7 +243,7 @@ void get_accel_bias(void)
 	long quat[4];
 	unsigned long sensor_timestamp;
 	unsigned char more;
-	
+	float Err = 0;
 	
 	for(i = 0; i < 10000; i++)				//抽取刚上电不平稳的数据
 	{
@@ -283,10 +283,10 @@ void get_accel_bias(void)
 			accel_res[1] = (2*q0*q3+2*q1*q2) * filter_accel[0] + (q0*q0 - q1*q1 + q2*q2 - q3*q3) * filter_accel[1] + (-2*q0*q1+2*q2*q3) * filter_accel[2];	
 			accel_res[2] = (2*q1*q3-2*q0*q2) * filter_accel[0] + (2*q0*q1+2*q2*q3) * filter_accel[1] + (q0*q0 - q1*q1 - q2*q2 + q3*q3) * filter_accel[2];	
 
-			Accel_XOffset += ((float)accel_res[0] / 16384) * 9.8;	
-			Accel_YOffset += ((float)accel_res[1] / 16384) * 9.8;	
-			Accel_ZOffset += ((float)accel_res[2] / 16384) * 9.8;
-
+			Accel_XOffset += ((float)accel_res[0] / 16384);	
+			Accel_YOffset += ((float)accel_res[1] / 16384);	
+			Accel_ZOffset += ((float)accel_res[2] / 16384);
+			
 			count++;
 		}	
 	}
@@ -294,9 +294,11 @@ void get_accel_bias(void)
 	Accel_YOffset /= count;
 	Accel_ZOffset /= count;
 	
-//	Accel_ZErr = (9.8 - Accel_ZOffset) * 1638.4;
-//	
-//	printf("off %f  err%f \r\n",Accel_ZOffset,Accel_ZErr);
+		
+	Accel_ZErr = (sqrt(1-(Accel_XOffset*Accel_XOffset)-(Accel_YOffset*Accel_YOffset)) - Accel_ZOffset)*16384;
+	if(Accel_ZErr < 0)
+		Accel_ZErr *= -1;
+
 }
 
 float get_accel(void)	
@@ -314,6 +316,8 @@ float get_accel(void)
 	float dis_accel;
 	static float dis_z;
 	
+	float accel_x0,accel_y0,accel_z0;
+	
 	Time_Stamp = 0;
 	
 	do
@@ -330,17 +334,27 @@ float get_accel(void)
         
     	Pitch  = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3 + Pitch_error; // pitch    
     	Roll = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3 + Roll_error; // roll    
-		
+
 		acc_filter(accel,filter_accel);
+		
+//		accel_x0 =  ((float)filter_accel[0] / 16384);
+//		accel_y0 =  ((float)filter_accel[1] / 16384);
+//		accel_z0 =  ((float)filter_accel[2] / 16384);
+//		
+//		Accel_ZErr = (sqrt(1-(accel_x0*accel_x0)-(accel_y0*accel_y0)) - accel_z0)*16384;
+//		if(Accel_ZErr < 0)
+//			Accel_ZErr *= -1;
 		
 		accel_res[0] = (q0*q0 + q1*q1 - q2*q2 - q3*q3) * filter_accel[0] + (2*q1*q2-2*q0*q3) * filter_accel[1] + (2*q0*q2+2*q1*q3) * filter_accel[2];	
 		accel_res[1] = (2*q0*q3+2*q1*q2) * filter_accel[0] + (q0*q0 - q1*q1 + q2*q2 - q3*q3) * filter_accel[1] + (-2*q0*q1+2*q2*q3) * filter_accel[2];	
 		accel_res[2] = (2*q1*q3-2*q0*q2) * filter_accel[0] + (2*q0*q1+2*q2*q3) * filter_accel[1] + (q0*q0 - q1*q1 - q2*q2 + q3*q3) * (filter_accel[2] + Accel_ZErr);
-	
+		 
 		accel_x = (accel_res[0] / 16384) * 9.8 + 9.8;	
 		accel_y = (accel_res[1] / 16384) * 9.8 + 9.8;	
 		accel_z = (accel_res[2] / 16384) * 9.8;		
 	
+//		printf("%f  %f  %f   %d   %d   %d  %f  %f  %f \r\n",Accel_XOffset,Accel_YOffset,Accel_ZOffset,filter_accel[0],filter_accel[1],filter_accel[2],accel_x,accel_y,accel_z);
+		
 //		printf("add 1,0,%d",(int)(accel_z*10));											//串口屏显示波形  速度  位移
 //		Usart_SendByte(USART1, 0xFF);
 //		Usart_SendByte(USART1, 0xFF);

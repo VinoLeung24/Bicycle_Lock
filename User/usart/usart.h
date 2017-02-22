@@ -22,6 +22,7 @@
 
 
 void USARTx_Config(void);
+void NVIC_Configuration(void);
 void USART2_Config(void);
 void Usart_SendByte( USART_TypeDef * pUSARTx, uint8_t ch);
 void Usart_SendStr( USART_TypeDef * pUSARTx, uint8_t *str );
