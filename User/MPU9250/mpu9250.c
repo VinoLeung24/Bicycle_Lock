@@ -314,7 +314,8 @@ float get_accel(void)
 	unsigned char more;
 	static float speed,last_accel_z,dis,valley_dis,valley_min,down_peak;
 	float dis_accel;
-	static float dis_z;
+//	static float dis_z;
+	float dis_z = 0;
 	
 	float accel_x0,accel_y0,accel_z0;
 	

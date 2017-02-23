@@ -27,6 +27,7 @@
 #include "stm32f10x_it.h"
 #include "usart.h"
 #include "bicycle.h"
+#include "bsp_led.h"
 
 extern BICYCLE mBICYCLE;
 
@@ -35,10 +36,10 @@ extern uint16_t  uSec_Count;
 extern uint8_t Sec_Count;
 
 extern uint16_t u_Count_Lift;
-extern uint16_t s_Count_Lift;
+extern uint8_t s_Count_Lift;
 
 extern uint16_t u_Count_Shake;
-extern uint16_t s_Count_Shake;
+extern uint8_t s_Count_Shake;
 
 extern uint8_t new_lift;
 extern uint8_t new_shake;
@@ -165,7 +166,15 @@ void USART1_IRQHandler(void)
 	{ 	
 		ch	= USART_ReceiveData(USART1);
 	  	if(ch == 'C')
+		{
 			alarm = 0;
+			s_Count_Shake = 0;
+			s_Count_Lift = 0;
+			Buzzer_OFF;
+//			printf("rec\r\n\r\n");
+		}
+		
+//		USART_ClearITPendingBit(USART1,USART_IT_RXNE);
 	} 
 }
 
@@ -191,12 +200,15 @@ void TIM2_IRQHandler(void)
 				u_Count_Lift = 0;
 			}
 			
+			if(alarm == 0)
+			{
 				u_Count_Lift++;
 				if(u_Count_Lift == 10000)
 				{
 					s_Count_Lift++;
 					u_Count_Lift = 0;
 				}
+			}
 			
 		}
 		
@@ -209,12 +221,16 @@ void TIM2_IRQHandler(void)
 				u_Count_Shake = 0;
 			}
 			
-			u_Count_Shake++;
-			if(u_Count_Shake == 10000)
+			if(alarm == 0)
 			{
-				s_Count_Shake++;
-				u_Count_Shake = 0;
+				u_Count_Shake++;
+				if(u_Count_Shake == 10000)
+				{
+					s_Count_Shake++;
+					u_Count_Shake = 0;
+				}
 			}
+			
 		}
 
 		

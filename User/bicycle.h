@@ -7,8 +7,10 @@
 #define STATIC_HIGHT  	   37																			//定义自行车静止时激光所测高度  单位cm
 																										
 #define STATIC_LIFT_HIGHT  10																			//定义自行车被抬起的临界高度  单位cm
-#define LIFT_TIME          10
-																										
+#define LIFT_TIME           8
+
+#define SHAKE_TIME		   10
+
 #define FALL_RIGHT_ANGLE  -60																			//定义向右边倒下时的临界角度
 #define FALL_LEFT_ANGLE    60																			//定义向左边倒下时的临界角度
 

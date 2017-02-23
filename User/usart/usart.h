@@ -5,6 +5,8 @@
 #include "stm32f10x.h"
 #include <stdio.h>
 
+#define SENDBUFF_SIZE 26
+
 /**************************USART参数定义********************************/
 
 #define             macUSARTx                                USART1
@@ -22,7 +24,9 @@
 
 
 void USARTx_Config(void);
+void USART1_DMA_Config(void);
 void NVIC_Configuration(void);
+void reInitDMA4(void);
 void USART2_Config(void);
 void Usart_SendByte( USART_TypeDef * pUSARTx, uint8_t ch);
 void Usart_SendStr( USART_TypeDef * pUSARTx, uint8_t *str );
