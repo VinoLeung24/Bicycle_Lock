@@ -4,6 +4,12 @@
 #include "stm32f10x.h"
 #include "stdint.h"
 
+#define NORMAL_MODE			0
+#define ALARM_MODE			1
+
+#define noALARM				0
+#define ALARM				1
+
 #define STATIC_HIGHT  	   37																			//定义自行车静止时激光所测高度  单位cm
 																										
 #define STATIC_LIFT_HIGHT  10																			//定义自行车被抬起的临界高度  单位cm
@@ -36,5 +42,51 @@ typedef struct
 	uint8_t last_state;
 	
 }BICYCLE;
+
+typedef struct 
+{
+	enum state{
+        STATE_START_MODE,
+		STATE_FREEDOM_MODE,
+		STATE_SPORT_MODE,
+		STATE_SPORT_MODE_WARM1,
+		STATE_SPORT_MODE_WARM2,
+		STATE_SPORT_MODE_WARM3,
+		STATE_SPORT_MODE_LEVEL,
+		STATE_SPORT_MODE_CLIMB,
+		STATE_LESSON_MODE,
+		STATE_LESSON_MODE_WARM1,
+		STATE_LESSON_MODE_WARM2,
+		STATE_LESSON_MODE_WARM3,
+		STATE_LESSON_MODE_LEVEL,
+		STATE_LESSON_MODE_CLIMB,
+        STATE_OUTDOOR_MODE,
+		STATE_USER_REMENBER_DATA,
+		STATE_USER_CHECK,
+		STATE_CALIBRATION,
+	};
+	uint8_t outer_status;
+}MODE;
+
+enum STATE_CHECK
+{
+	NONE,
+	CMD,
+	DATA,
+	
+};
+
+enum BICYCLE_STATE
+{
+	STATE_NONE,
+	STATE_STATIC_NORMAL,
+	STATE_LIFT_TO_STATIC,		//多次小范围移动 	--轻度警告
+	STATE_SHAKE_TO_STATIC,		//持续多次震动   	--轻度警告
+	STATE_FALDOWN,				//自行车倒下			--提醒
+	STATE_LIFT_BEYOND_HEIGHT,	//被抬高超过50cm 	--严重警告
+	STATE_LIFT_BEYOND_TIME,		//长时间处于抬高状态	--严重警告
+	STATE_SHAKE_BEYOND_TIME,	//长时间处于震动状态	--严重警告
+	STATE_DESTORY_LOCK,			//撬锁
+};
 
 #endif

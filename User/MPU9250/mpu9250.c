@@ -243,7 +243,7 @@ void get_accel_bias(void)
 	long quat[4];
 	unsigned long sensor_timestamp;
 	unsigned char more;
-	float Err = 0;
+//	float Err = 0;
 	
 	for(i = 0; i < 10000; i++)				//抽取刚上电不平稳的数据
 	{
@@ -314,11 +314,8 @@ float get_accel(void)
 	unsigned char more;
 	static float speed,last_accel_z,dis,valley_dis,valley_min,down_peak;
 	float dis_accel;
-//	static float dis_z;
 	float dis_z = 0;
-	
-	float accel_x0,accel_y0,accel_z0;
-	
+
 	Time_Stamp = 0;
 	
 	do
@@ -355,7 +352,7 @@ float get_accel(void)
 		accel_z = (accel_res[2] / 16384) * 9.8;		
 	
 //		printf("%f  %f  %f   %d   %d   %d  %f  %f  %f \r\n",Accel_XOffset,Accel_YOffset,Accel_ZOffset,filter_accel[0],filter_accel[1],filter_accel[2],accel_x,accel_y,accel_z);
-		
+//		printf("%f  %f  %f \r\n",accel_x,accel_y,accel_z);
 //		printf("add 1,0,%d",(int)(accel_z*10));											//串口屏显示波形  速度  位移
 //		Usart_SendByte(USART1, 0xFF);
 //		Usart_SendByte(USART1, 0xFF);

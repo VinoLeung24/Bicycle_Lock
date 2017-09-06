@@ -28,6 +28,7 @@
 #include "usart.h"
 #include "bicycle.h"
 #include "bsp_led.h"
+#include "lock.h"
 
 extern BICYCLE mBICYCLE;
 
@@ -158,25 +159,93 @@ void SysTick_Handler(void)
 }
 
 extern uint8_t alarm;
+//extern uint8_t speed_send;
+//uint8_t freq_send = 0;
+//extern uint8_t SendSpeed[SENDBUFF_SIZE];
 
-void USART1_IRQHandler(void)
+void USART2_IRQHandler(void)
 {
-	char ch;
-	if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
-	{ 	
-		ch	= USART_ReceiveData(USART1);
-	  	if(ch == 'C')
+	uint8_t data_rx;
+
+	if(USART_GetITStatus(USART2, USART_IT_RXNE) != RESET)
+	{
+		data_rx = USART_ReceiveData(USART2);
+		if(data_rx == 'c')											//清除情报标志
 		{
 			alarm = 0;
 			s_Count_Shake = 0;
 			s_Count_Lift = 0;
 			Buzzer_OFF;
-//			printf("rec\r\n\r\n");
 		}
 		
-//		USART_ClearITPendingBit(USART1,USART_IT_RXNE);
-	} 
+		if(data_rx == 'o')											//清除情报标志
+		{
+			UnLock();
+			
+		}
+	
+		if(data_rx == 'u')											//清除情报标志
+		{
+			Lock();
+		}
+	}
 }
+
+
+//void USART1_IRQHandler(void)
+//{
+//	static uint8_t model_flag;
+//	uint8_t data_rx;
+
+//	if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
+//	{
+//		data_rx = USART_ReceiveData(USART1);
+
+//		if(model_flag)
+//		{
+//			model_flag = 0;
+//			switch(data_rx)
+//			{
+//				case '0':													//返回主界面 初始化  关闭led指示灯  关闭tim3 (心率)															
+//					freq_send = 0;
+//					speed_send = 0;
+//					SendSpeed[7] = 0;										//速度清零
+//				    SendSpeed[8] = 0;
+//				break;
+//				
+//				case '1':													//自由模式 打开tim3(心率)	//计时清零	
+//					freq_send = 1;
+//					speed_send = 1;
+//				break;
+//				
+//				case '2':													//自由模式  (平路模式) 打开tim3(心率)	
+//					freq_send = 1;
+//					speed_send = 1;
+//				break;
+//				
+//				case '3':													//自由模式 (爬坡模式) 打开tim3(心率)	
+//					freq_send = 1;
+//					speed_send = 1;
+//				break;
+//				
+//				case '4':													//自由模式 (热身模式) 关闭tim3(心率)
+//					freq_send = 0;
+//					speed_send = 0;
+//					SendSpeed[7] = 0;										//速度清零
+//				    SendSpeed[8] = 0;
+//				break;
+//				
+//				default:
+//				break;
+//			}
+//		}
+//		
+//		if(data_rx == 'm')
+//			model_flag = 1;
+//		
+//		
+//	} 
+//}
 
 void TIM2_IRQHandler(void)
 {
@@ -230,13 +299,57 @@ void TIM2_IRQHandler(void)
 					u_Count_Shake = 0;
 				}
 			}
-			
 		}
 
 		
 		TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);  		 
 	}		 	
 }
+
+//extern float stopwatchTime;                              //主要用于码表的计时
+////定时器3中断服务程序                                
+//void TIM3_IRQHandler(void)   //TIM3中断
+//{
+//	if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)  //检查TIM3更新中断发生与否
+//	{
+//		TIM_ClearITPendingBit(TIM3, TIM_IT_Update  );  //清除TIMx更新中断标志 
+//		
+//		stopwatchTime = stopwatchTime + 1;
+//		
+//	}
+//}
+
+//extern uint8_t SendFreq[FREQ_SIZE];
+
+//void EXTI15_10_IRQHandler(void)
+//{
+//	static uint8_t freq = 0;
+//	if(EXTI_GetITStatus(EXTI_Line12) != RESET) //确保是否产生了EXTI Line中断
+//	{
+//		if(freq_send)
+//		{
+//			SendFreq[7] = 'l';
+//			if(freq == 1)
+//				reSendFreq();
+//			freq = 0;
+//		}
+//		
+//		EXTI_ClearITPendingBit(EXTI_Line12);     //清除中断标志位
+//	} 
+//	
+//	if(EXTI_GetITStatus(EXTI_Line13) != RESET) //确保是否产生了EXTI Line中断
+//	{
+//		if(freq_send)
+//		{
+//			SendFreq[7] = 'r';
+//			if(freq == 0)
+//				reSendFreq();
+//			freq = 1;
+//		}
+//		
+//		EXTI_ClearITPendingBit(EXTI_Line13);     //清除中断标志位
+//	} 
+//}
 
 /******************************************************************************/
 /*                 STM32F10x Peripherals Interrupt Handlers                   */

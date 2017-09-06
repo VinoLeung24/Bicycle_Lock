@@ -13,9 +13,10 @@
 #define Buzzer_OFF	GPIOB->BRR  |= 0X4000;
 #define Buzzer_ON 	GPIOB->BSRR |= 0X4000;
 
-void LED_GPIO_Config(void);
+void StepFreq_Config(void);
 void buzzer_init(void);
 void Shake_GPIO_Config(void);
 uint8_t isShake(void);
+void ZigbeeGpioInit(void);
 
 #endif /* __LED_H */

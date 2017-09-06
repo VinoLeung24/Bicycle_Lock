@@ -5,7 +5,10 @@
 #include "stm32f10x.h"
 #include <stdio.h>
 
-#define SENDBUFF_SIZE 26
+#define SENDBUFF_SIZE 9
+#define FREQ_SIZE     8
+#define ALARM_SIZE     9
+#define SENDDATA_SIZE 26
 
 /**************************USART参数定义********************************/
 
@@ -31,5 +34,8 @@ void USART2_Config(void);
 void Usart_SendByte( USART_TypeDef * pUSARTx, uint8_t ch);
 void Usart_SendStr( USART_TypeDef * pUSARTx, uint8_t *str );
 void Usart_SendStr_length( USART_TypeDef * pUSARTx, uint8_t *str,uint32_t strlen );
-
+void reSendSpeed(void);
+void reSendFreq(void);
+void reSendData(void);
+void SendWarning(uint8_t state, uint8_t cmd);
 #endif /* __USART1_H */

@@ -12,14 +12,18 @@
   */
   
 #include "usart.h"
+#include "bicycle.h"
 
-uint8_t SendBuff[SENDBUFF_SIZE]={'l','t',' ','0','0',' ','s','t',' ','0','0',' ','d',' ','0','0',' ','s',' ','0',' ',' ',' ',' ',' ',' '}; 
+uint8_t SendSpeed[SENDBUFF_SIZE]={0xAA,0x00,0x01,0x55,'s','1',DATA,0,0};
+uint8_t SendFreq[FREQ_SIZE]={0xAA,0x00,0x01,0x55,'s','1',CMD,0,};
+uint8_t SendAlarm[ALARM_SIZE]={0xAA,0x00,0x02,0x55,'{',0,',',0,'}'};
+
 
 void USART1_DMA_Config(void)
 {
 		DMA_InitTypeDef DMA_InitStructure;
 	
-		/*开启DMA时钟*/
+		/*开启DMA时钟*/  
 		RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
 
 		/*设置DMA源：串口数据寄存器地址*/
@@ -27,7 +31,7 @@ void USART1_DMA_Config(void)
 		DMA_InitStructure.DMA_PeripheralBaseAddr = ( u32 ) ( & ( USART1->DR ) );	
 
 		/*内存地址(要传输的变量的指针)*/
-		DMA_InitStructure.DMA_MemoryBaseAddr = (u32)SendBuff;
+		DMA_InitStructure.DMA_MemoryBaseAddr = (u32)SendSpeed;
 
 		/*方向：从内存到外设*/		
 		DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;	
@@ -61,7 +65,7 @@ void USART1_DMA_Config(void)
 		DMA_Init(DMA1_Channel4, &DMA_InitStructure); 	   
 		
 		/*使能DMA*/
-		DMA_Cmd (DMA1_Channel4,ENABLE);					
+		DMA_Cmd (DMA1_Channel4,DISABLE);					
 		//DMA_ITConfig(DMA1_Channel4,DMA_IT_TC,ENABLE);  //配置DMA发送完成后产生中断
 }
 
@@ -75,6 +79,20 @@ void NVIC_Configuration(void)
 	NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;	 
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+}
+
+void NVIC_Configuration_2(void)
+{
+	NVIC_InitTypeDef NVIC_InitStructure; 
+	/* Configure the NVIC Preemption Priority Bits */  
+	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
+	
+	/* Enable the USARTy Interrupt */
+	NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;	 
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 }
@@ -151,6 +169,10 @@ void USART2_Config(void)
 
 	USART_Init(USART2, &USART_InitStructure); 
 	
+	/* 使能串口1接收中断 */
+	NVIC_Configuration_2();
+	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+	
 	USART_Cmd(USART2, ENABLE);
 	USART_ClearFlag(USART2, USART_FLAG_TC);
 }
@@ -207,11 +229,45 @@ void Usart_SendStr_length( USART_TypeDef * pUSARTx, uint8_t *str,uint32_t strlen
     } while(k < strlen);
 }
 
-void reInitDMA4(void)
+void reSendSpeed(void)
 {
-	DMA1_Channel4->CCR&=~(1<<0);  //关闭DMA传输 
-	DMA1_Channel4->CNDTR=SENDBUFF_SIZE;  //DMA1,传输数据量
-	DMA1_Channel4->CCR|=1<<0;  //开启DMA传输
+	DMA1_Channel4->CCR&=~(1<<0);  				//关闭DMA传输 
+	DMA1_Channel4->CMAR = (u32)SendSpeed;		//要传输的数据
+	DMA1_Channel4->CNDTR=SENDBUFF_SIZE;  		//DMA1,传输数据量
+	DMA1_Channel4->CCR|=1<<0;  					//开启DMA传输
 }
+
+//void SendWarning(uint8_t state, uint8_t cmd)
+//{
+//	SendAlarm[5] = state + '0';
+//	SendAlarm[7] = cmd + '0';
+//	DMA1_Channel4->CCR&=~(1<<0);  				//关闭DMA传输 
+//	DMA1_Channel4->CMAR=(u32)SendAlarm;		//要传输的数据
+//	DMA1_Channel4->CNDTR=ALARM_SIZE;  		//DMA1,传输数据量
+//	DMA1_Channel4->CCR|=1<<0;  					//开启DMA传输
+//}
+
+void SendWarning(uint8_t state, uint8_t cmd)
+{
+//	Usart_SendByte(USART2,0xAA);
+//	Usart_SendByte(USART2,0x00);
+//	Usart_SendByte(USART2,0x02);
+//	Usart_SendByte(USART2,0x55);
+	Usart_SendByte(USART2,'{');
+	Usart_SendByte(USART2,state + '0');
+	Usart_SendByte(USART2,',');
+	Usart_SendByte(USART2,cmd + '0');
+	Usart_SendByte(USART2,'}');
+}
+
+void reSendFreq(void)
+{
+	DMA1_Channel4->CCR&=~(1<<0);  				//关闭DMA传输 
+	DMA1_Channel4->CMAR = (u32)SendFreq;		//要传输的数据
+	DMA1_Channel4->CNDTR=FREQ_SIZE;  			//DMA1,传输数据量
+	DMA1_Channel4->CCR|=1<<0;  					//开启DMA传输
+}
+
+
 
 /*********************************************END OF FILE**********************/
